@@ -3,50 +3,47 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	h "ride-sharing/services/trip-service/internal/infrastructure/http"
-	"ride-sharing/services/trip-service/internal/infrastructure/repository"
-	"ride-sharing/services/trip-service/internal/service"
+	"google.golang.org/grpc"
 )
+
+var GrpcAddr = ":9093"
 
 func main() {
 
-	inmemRepo := repository.NewInmemRepository()
-	svc := service.NewService(inmemRepo)
-	mux := http.NewServeMux()
-	httpHandler := h.HttpHandler{Service: svc}
-	mux.HandleFunc("POST /preview", httpHandler.HandleTripPreview)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	server := &http.Server{
-		Addr:    ":8083",
-		Handler: mux,
-	}
-
-	serverErrors := make(chan error, 1)
 	go func() {
-		log.Printf("Trip Service listening on %s", server.Addr)
-		serverErrors <- server.ListenAndServe()
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+		<-sigCh
+		log.Println("Shutting down trip service...")
+		cancel()
 	}()
 
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-
-	select {
-	case err := <-serverErrors:
-		log.Fatalf("Could not start server: %v", err)
-	case sig := <-shutdown:
-		log.Printf("Shutting down server due to signal: %v", sig)
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		if err := server.Shutdown(ctx); err != nil {
-			log.Printf("Could not stop the server gracefully: %v", err)
-			server.Close()
-		}
+	lis, err := net.Listen("tcp", GrpcAddr)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
 	}
+
+	grpcServer := grpc.NewServer()
+
+	log.Printf("Starting gRPC server trip Service on port %s", lis.Addr().String())
+
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Printf("failed to serve: %v", err)
+			cancel()
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Stopping gRPC server...")
+	grpcServer.GracefulStop()
+	log.Println("Trip service stopped.")
 }
