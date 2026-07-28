@@ -39,3 +39,15 @@ func (o *OsrmApiResponse) ToProto() *pb.Route {
 		Duration: route.Duration,
 	}
 }
+
+type PricingConfig struct {
+	PricePerUnitOfDistance float64
+	PricingPerMinute       float64
+}
+
+func DefaultPricingConfig() *PricingConfig {
+	return &PricingConfig{
+		PricePerUnitOfDistance: 1.5,  // Example: $0.5 per kilometer
+		PricingPerMinute:       0.25, // Example: $0.2 per minute
+	}
+}
