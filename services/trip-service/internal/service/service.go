@@ -9,6 +9,8 @@ import (
 	"ride-sharing/services/trip-service/internal/domain"
 	"ride-sharing/shared/types"
 
+	tripTypes "ride-sharing/services/trip-service/pkg/types"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -32,7 +34,7 @@ func (s *service) CreateTrip(ctx context.Context, fare *domain.RideFareModel) (*
 	return s.repo.CreateTrip(ctx, t)
 }
 
-func (s *service) GetRoute(ctx context.Context, pickup, destination *types.Coordinate) (*types.OsrmApiResponse, error) {
+func (s *service) GetRoute(ctx context.Context, pickup, destination *types.Coordinate) (*tripTypes.OsrmApiResponse, error) {
 	// Implement the logic to get the route between pickup and destination coordinates
 	// This is a placeholder implementation, you can replace it with actual logic
 	url := fmt.Sprintf(
@@ -51,7 +53,7 @@ func (s *service) GetRoute(ctx context.Context, pickup, destination *types.Coord
 		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
-	var routeResp types.OsrmApiResponse
+	var routeResp tripTypes.OsrmApiResponse
 	if err := json.Unmarshal(body, &routeResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
 	}
