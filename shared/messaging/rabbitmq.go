@@ -44,7 +44,7 @@ func (r *RabbitMQ) ConsumeMessages(queueName string, handler MessageHandler) err
 	msgs, err := r.Channel.Consume(
 		queueName,
 		"",
-		true,
+		false,
 		false,
 		false,
 		false,
@@ -60,10 +60,18 @@ func (r *RabbitMQ) ConsumeMessages(queueName string, handler MessageHandler) err
 		for msg := range msgs {
 			log.Printf("Received a message: %s", msg.Body)
 			if err := handler(ctx, msg); err != nil {
-				log.Printf("Error handling message: %v", err)
-			}
+				log.Printf("ERROR: failed to handle message: %v", err)
 
+				if nackErr := msg.Nack(false, false); nackErr != nil {
+					log.Printf("ERROR: failed to nack message: %v", nackErr)
+				}
+				continue
+			}
+			if ackErr := msg.Ack(false); ackErr != nil {
+				log.Printf("ERROR: failed to ack message: %v", ackErr)
+			}
 		}
+
 	}()
 
 	return nil
