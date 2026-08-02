@@ -45,15 +45,16 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, routingKey string, messag
 		false,
 		false,
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(message),
+			ContentType:  "text/plain",
+			Body:         []byte(message),
+			DeliveryMode: amqp.Persistent,
 		})
 }
 
 func (r *RabbitMQ) setupExchangesAndQueues() error {
 	_, err := r.Channel.QueueDeclare(
 		"hello",
-		false,
+		true,
 		false,
 		false,
 		false,
