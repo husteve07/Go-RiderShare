@@ -41,6 +41,16 @@ func NewRabbitMQ(uri string) (*RabbitMQ, error) {
 type MessageHandler func(context.Context, amqp.Delivery) error
 
 func (r *RabbitMQ) ConsumeMessages(queueName string, handler MessageHandler) error {
+
+	err := r.Channel.Qos(
+		1,
+		0,
+		false,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to set QoS: %v", err)
+	}
+
 	msgs, err := r.Channel.Consume(
 		queueName,
 		"",
