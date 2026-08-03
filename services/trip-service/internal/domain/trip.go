@@ -11,10 +11,21 @@ import (
 
 type TripModel struct {
 	ID       primitive.ObjectID
-	UserId   string
+	UserID   string
 	Status   string
 	RideFare *RideFareModel
 	Driver   *pb.TripDriver
+}
+
+func (t *TripModel) ToProto() *pb.Trip {
+	return &pb.Trip{
+		Id:           t.ID.Hex(),
+		UserID:       t.UserID,
+		SelectedFare: t.RideFare.ToProto(),
+		Status:       t.Status,
+		Driver:       t.Driver,
+		Route:        t.RideFare.Route.ToProto(),
+	}
 }
 
 type TripRepository interface {
