@@ -10,6 +10,8 @@ import (
 	"ride-sharing/services/trip-service/internal/domain"
 	"ride-sharing/shared/types"
 
+	driverpb "ride-sharing/shared/proto/driver"
+
 	tripTypes "ride-sharing/services/trip-service/pkg/types"
 	"ride-sharing/shared/proto/trip"
 
@@ -17,12 +19,14 @@ import (
 )
 
 type service struct {
-	repo domain.TripRepository
+	repo    domain.TripRepository
+	drivers []*driverpb.RegisterDriverResponse
 }
 
 func NewService(repo domain.TripRepository) *service {
 	return &service{
-		repo: repo,
+		repo:    repo,
+		drivers: []*driverpb.RegisterDriverResponse{},
 	}
 }
 
@@ -35,6 +39,21 @@ func (s *service) CreateTrip(ctx context.Context, fare *domain.RideFareModel) (*
 		Driver:   &trip.TripDriver{},
 	}
 	return s.repo.CreateTrip(ctx, t)
+}
+func (s *service) FindAvailableDrivers(packageType string) []string {
+	var matchingDrivers []string
+
+	for _, driver := range s.drivers {
+		if driver.Driver.PackageSlug == packageType {
+			matchingDrivers = append(matchingDrivers, driver.Driver.Id)
+		}
+	}
+
+	if len(matchingDrivers) == 0 {
+		return []string{}
+	}
+
+	return matchingDrivers
 }
 
 func (s *service) GetRoute(ctx context.Context, pickup, destination *types.Coordinate) (*tripTypes.OsrmApiResponse, error) {
