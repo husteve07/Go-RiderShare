@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"ride-sharing/shared/contracts"
 	"ride-sharing/shared/messaging"
 
@@ -23,7 +24,7 @@ func NewTripConsumer(rabbitmq *messaging.RabbitMQ, service *Service) *tripConsum
 }
 
 func (c *tripConsumer) Listen() error {
-	return c.rabbitmq.ConsumeMessages(messaging.FindAvailableDriversEvent, func(ctx context.Context, msg amqp091.Delivery) error {
+	return c.rabbitmq.ConsumeMessages(messaging.FindAvailableDriversQueue, func(ctx context.Context, msg amqp091.Delivery) error {
 		var tripEvent contracts.AmqpMessage
 		if err := json.Unmarshal(msg.Body, &tripEvent); err != nil {
 			log.Printf("Failed to unmarshal message: %v", err)
@@ -64,8 +65,9 @@ func (c *tripConsumer) handleFindAndNotifyDrivers(ctx context.Context, payload m
 		return nil
 	}
 
-	suitableDriverID := suitableIDs[0]
+	randomIndex := rand.Intn(len(suitableIDs))
 
+	suitableDriverID := suitableIDs[randomIndex]
 	marshalledEvent, err := json.Marshal(payload)
 	if err != nil {
 		return err
