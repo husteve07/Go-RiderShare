@@ -48,7 +48,10 @@ func (c *driverConsumer) Listen() error {
 				return err
 			}
 		case contracts.DriverCmdTripDecline:
-			log.Println("Declined")
+			if err := c.handleTripDeclined(ctx, payload.TripID, payload.RiderID); err != nil {
+				log.Printf("Failed to handle the trip decline: %v", err)
+				return err
+			}
 			return nil
 		}
 		log.Printf("unknown trip event: %+v", payload)
@@ -123,6 +126,21 @@ func (c *driverConsumer) handleTripAccepted(ctx context.Context, tripID string, 
 	}
 
 	// TODO: Notify the payment service to start a payment link
+	marshalledPayload, err := json.Marshal(messaging.PaymentTripResponseData{
+		TripID:   tripID,
+		UserID:   trip.UserID,
+		DriverID: driver.Id,
+		Amount:   trip.RideFare.TotalPriceInCents,
+		Currency: "USD",
+	})
 
+	if err := c.rabbitmq.PublishMessage(ctx, contracts.PaymentCmdCreateSession,
+		contracts.AmqpMessage{
+			OwnerID: trip.UserID,
+			Data:    marshalledPayload,
+		},
+	); err != nil {
+		return err
+	}
 	return nil
 }
